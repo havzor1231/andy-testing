@@ -51,12 +51,23 @@ def search_class(prefix, class_list, classesJson, ratingsJson):
                 prof_rating = "N/A"
             
             for section in data[class_code]["Sections"]:
-                string_time = section["Times"].split(" ")
+                original_time = section["Times"]
+                string_time = original_time.split(" ")
                 # print(string_time)
 
-                days_of_week = string_time[0]
-                # print(days_of_week)
-                curr_time = string_time[1]
+                #if doesn't meet
+                if original_time == "Does Not Meet" or original_time == "Meets Online":
+                    days_of_week = original_time
+                    curr_time = "N/A"
+                else:
+                    days_of_week = string_time[0]
+                    curr_time = string_time[1]
+                    #if friday class exists
+                    if len(string_time) > 3:
+                        days_of_week = days_of_week + string_time[2]
+                        curr_time = string_time[1] + " " + string_time[3]
+
+
                 section_number = section["Section Number"]
                 course_name_section = class_code + "-" + section_number + ": " + course_name 
 

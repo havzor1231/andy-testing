@@ -57,7 +57,11 @@
             </td>
             <td>
                 <div class="r-no">
+                    {% if post.prof_rating == "N/A" %}
+                        <span>{{ "N/A" }}</span>
+                    {% else %}
                     <span>{{ post.prof_rating + "/5.0" }}</span>
+                    {% endif %}
                 </div>
             </td>
             <td>

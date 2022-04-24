@@ -4,6 +4,7 @@ from flask_wtf import FlaskForm
 from wtforms.validators import DataRequired
 from search import filter_search
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import desc
 import json
 import os
 from datetime import datetime
@@ -11,6 +12,7 @@ from dotenv import find_dotenv, load_dotenv
 from authlib.integrations.flask_client import OAuth
 from os import environ as env
 from urllib.parse import quote_plus, urlencode
+import datetime
 
 
 ENV_FILE = find_dotenv()
@@ -36,6 +38,8 @@ oauth.register(
 current_file_dir = os.path.dirname(__file__)
 class_json_path = os.path.join(current_file_dir, "json", "classes.json")
 days_map = {"M": "Monday", "T": "Tuesday", "W": "Wednesday", "Th": "Thursday", "F": "Friday"}
+class_prof_rating_path = os.path.join(current_file_dir, "json", "Professor_Ratings.json")
+
 
 
 
@@ -52,7 +56,6 @@ class Users(db.Model):
 
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), nullable=False, unique=True)
-    date_added = db.Column(db.DateTime, default=datetime.utcnow)
 
     #create one to many relationship with courses
     classes = db.relationship("Courses")
@@ -68,12 +71,15 @@ class Courses(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
     class_code = db.Column(db.String(100))
-    class_title = db.Column(db.String(150))
+    class_title = db.Column(db.String(100))
     section_number = db.Column(db.Integer)
+    section_number_str = db.Column(db.String(5))
     credit_hours = db.Column(db.Integer)
-    day_of_week = db.Column(db.String(100)) 
-    time = db.Column(db.String(100)) 
+    day_of_week = db.Column(db.String(20)) 
+    time = db.Column(db.String(50)) 
     professor_name = db.Column(db.String(100))
+    professor_rating = db.Column(db.String(10))
+    # date_time = db.DateTime(datetime.time)
 
 
 ##ROUTES
@@ -85,16 +91,21 @@ def index():
         
         #get classes from user's db
         user_courses = Courses.query.filter_by(user_id=session["user_id"])
+        # for course in user_courses:
+        #     print(course.class_title)
+        #     print(course.class_code)
+        #     print(course.section_number)
 
-        monday_courses = user_courses.filter_by(day_of_week="Monday")
-        tuesday_courses = user_courses.filter_by(day_of_week="Tuesday")
-        wednesday_courses = user_courses.filter_by(day_of_week="Wednesday")
-        thursday_courses = user_courses.filter_by(day_of_week="Thursday")
-        friday_courses = user_courses.filter_by(day_of_week="Friday")
+
+        monday = user_courses.filter_by(day_of_week="Monday").order_by(Courses.time.desc())
+        tuesday = user_courses.filter_by(day_of_week="Tuesday").order_by(Courses.time.desc())
+        wednesday = user_courses.filter_by(day_of_week="Wednesday").order_by(Courses.time.desc())
+        thursday = user_courses.filter_by(day_of_week="Thursday").order_by(Courses.time.desc())
+        friday = user_courses.filter_by(day_of_week="Friday").order_by(Courses.time.desc())
         
+        return render_template("index.html", name = full_name, monday=monday, tuesday=tuesday, wednesday=wednesday, thursday=thursday, friday=friday)
 
-
-    return render_template('index.html', name=full_name)
+    return render_template('index_old.html', name=full_name)
 
 import os
 SECRET_KEY = os.urandom(32)
@@ -177,13 +188,21 @@ def add_class(class_code, section_num):
         if not course_exists:
             class_file = open(class_json_path)
             data = json.load(class_file)
+
+            ratings_file = open(class_prof_rating_path)
+            ratings_data = json.load(ratings_file)
             
             course_name = data[class_code]["Class Title"]
             credit_hours = data[class_code]["Credit Hours"]
             professor = data[class_code]["Professors"]
             time = data[class_code]["Sections"][int(section_num) - 1]["Times"]
             time_list = time.split(" ")
-            # print(time_list)
+            print(time_list)
+
+            #find ratings of professor
+            prof_rating = "N/A"
+            if professor in ratings_data:
+                prof_rating = ratings_data[professor]["Level of Difficulty"]
 
             days_in_week = {}
             for j, ele in enumerate(time_list):
@@ -197,8 +216,23 @@ def add_class(class_code, section_num):
                             days_in_week[days_map["Th"]] = time_list[j + 1].rstrip(";")
                         
             for day in days_in_week:
+                curr_time = days_in_week[day]
+
+                #creating datetime object
+
+                # start_time = curr_time.split("-")[0]
+                # # print(start_time)
+                
+                # if ":" not in start_time:
+                #     time_obj = datetime.time(int(start_time))
+                #     # print(time_obj)
+                # else:
+                #     time_split = start_time.split(":")
+                #     time_obj = datetime.time(int(time_split[0]), int(time_split[1][:2]))
+                #     # print(time_obj)
+
                 new_class = Courses(user_id = session["user_id"], class_code=class_code, class_title=course_name, 
-                section_number = section_num, credit_hours=credit_hours, day_of_week = day, time = days_in_week[day], professor_name = professor)
+                section_number = section_num, credit_hours=credit_hours, day_of_week = day, time = curr_time, professor_name = professor, professor_rating=prof_rating, section_number_str=str(section_num))
                 db.session.add(new_class)
                 db.session.commit()
                 print("class added to db.")
@@ -214,50 +248,32 @@ def add_class(class_code, section_num):
 
         return redirect("/")
 
-@app.route("/remove_class", methods = ["POST"])
-def remove_class():
+@app.route("/remove_class/<class_code>/<section_num>", methods = ["POST"])
+def remove_class(class_code, section_num):
     if request.method == "POST":
-        course_query = Courses.query.filter_by(user_id=session["user_id"], class_code=class_code).count()
-        course_exists = False if course_query == 0 else True
+        class_to_delete = Courses.query.filter_by(user_id=session["user_id"], class_code=class_code, section_number = section_num).first()
         
-        if not course_exists:
-            class_file = open(class_json_path)
-            data = json.load(class_file)
-            
-            course_name = data[class_code]["Class Title"]
-            credit_hours = data[class_code]["Credit Hours"]
-            professor = data[class_code]["Professors"]
-            time = data[class_code]["Sections"][int(section_num) - 1]["Times"]
-            time_list = time.split(" ")
-            # print(time_list)
+        # print(class_to_delete.class_code)
+        # print(class_to_delete.section_number)
 
+        db.session.delete(class_to_delete)
+        db.session.commit()
+        print("class deleted successfully.")
 
-            days_in_week = {}
-            for j, ele in enumerate(time_list):
-                if ele[0].isupper():
-                    for i, char in enumerate(ele):
-                        if not char.isupper():
-                            continue
-                        if days_map[char] not in days_in_week:
-                            days_in_week[days_map[char]] = time_list[j + 1].rstrip(";")
-                        else:   #if in seen, must have encountered Thursday. can't fall into else statement unless T has been added and Th is found. 
-                            days_in_week[days_map["Th"]] = time_list[j + 1].rstrip(";")
-                        
-            for day in days_in_week:
-                new_class = Courses(user_id = session["user_id"], class_code=class_code, class_title=course_name, 
-                section_number = section_num, credit_hours=credit_hours, day_of_week = day, time = days_in_week[day], professor_name = professor)
-                db.session.add(new_class)
-                db.session.commit()
-                print("class added to db.")
-        else:
-            print("course already exists in db.")
-                # classes = Courses.query.filter_by()
-                # classes = classes.filter(Courses.user_id)
-                # rows = classes.statement.execute().fetchall()
-                # for row in rows:
-                #     print(row)
+        full_name = session["user"]["userinfo"]["name"]
+        user_courses = Courses.query.filter_by(user_id=session["user_id"])
+        # for course in user_courses:
+        #     print(course.class_title)
+        #     print(course.class_code)
+        #     print(course.section_number)
 
-        return redirect("/")
+        monday = user_courses.filter_by(day_of_week="Monday").order_by(Courses.time.desc())
+        tuesday = user_courses.filter_by(day_of_week="Tuesday").order_by(Courses.time.desc())
+        wednesday = user_courses.filter_by(day_of_week="Wednesday").order_by(Courses.time.desc())
+        thursday = user_courses.filter_by(day_of_week="Thursday").order_by(Courses.time.desc())
+        friday = user_courses.filter_by(day_of_week="Friday").order_by(Courses.time.desc())
+
+        return render_template("index.html", name = full_name, monday=monday, tuesday=tuesday, wednesday=wednesday, thursday=thursday, friday=friday)
     
 
 
