@@ -1,10 +1,41 @@
 * {
-    font-family: Georgia, 'Times New Roman', Times, serif;
-}
+    font-family: 'Montserrat';
+  }  
 
 .welcome-section hr {
     height: 5px;
     margin-bottom: 20px;
+}
+
+#navbar {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    background: linear-gradient(120deg, #7F70F5, #0EA0FF);
+    color: #fff;
+}
+
+.navbar-brand {
+    margin-left: 100px;
+}
+
+.nav-item {
+    padding-right: 45px;
+    font-weight: 900 !important;
+}
+
+.nav-link {
+    font-weight: 900 !important;
+}
+
+.sticky {
+    position: fixed;
+    top: 0;
+    width: 100%;
 }
 
 .welcome-section p {
@@ -33,22 +64,6 @@
     margin-bottom: 20pxs;
 }
 
-.navbar {
-    background: linear-gradient(120deg, #7f70f5, #0ea0ff);
-    position: relative;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    padding-top: .5rem;
-    padding-bottom: .5rem;
-}
-
-.navbar-brand {
-    margin-right: 200px;
-    font-size: 25px;
-}
-
 .students {
     width: 900px;
 }
@@ -66,11 +81,6 @@
     position: relative;
     margin-left: 1px;
     margin-right: 1px;
-}
-
-.navbar-toggler {
-    border-radius: 2em;
-    transform: box-shadow 15s ease-in-out;
 }
 
 .about {
@@ -127,3 +137,8 @@
     transform: translateY(-25px);
 }
 
+.team-pic {
+    border-radius: 50%;
+    height: 250px;
+    width: 300px;
+}
