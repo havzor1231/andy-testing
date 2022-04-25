@@ -45,7 +45,10 @@ class_prof_rating_path = os.path.join(current_file_dir, "json", "Professor_Ratin
 
 ## DATABASE CONFIG
 db_name = "database.db"
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + db_name
+# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + db_name
+app.config["SQLALCHEMY_DATABASE_URI"] = "postgres://mhzraoglfqvuhd:a4e57cabc9e70578e43a1a4ddadcf4581a294024e877fbbe55436ecb03837ed4@ec2-3-209-124-113.compute-1.amazonaws.com:5432/d80of9t8c82dt8"
+
+
 app.config["SECRET_KEY"] = "abcde"
 
 db = SQLAlchemy(app)
@@ -79,7 +82,6 @@ class Courses(db.Model):
     time = db.Column(db.String(50)) 
     professor_name = db.Column(db.String(100))
     professor_rating = db.Column(db.String(10))
-    # date_time = db.DateTime(datetime.time)
 
 
 ##ROUTES
