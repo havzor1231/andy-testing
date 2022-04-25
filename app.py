@@ -110,7 +110,7 @@ def index():
     return render_template('index_old.html', name=full_name)
 
 import os
-SECRET_KEY = os.urandom(32)
+SECRET_KEY = "pushin-pp"
 app.config['SECRET_KEY'] = SECRET_KEY
 
 @app.route('/about')
